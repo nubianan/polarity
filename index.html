@@ -1,5 +1,3 @@
-# polarity
-Microphone Polar Patterns
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>Mic Polar Pattern Explorer</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,10 +17,11 @@ body{margin:0;min-height:100vh;padding:24px 16px;font:15px 'Barlow Condensed',sa
 header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid #8a8a85;padding-bottom:10px;margin-bottom:14px;box-shadow:0 1px 0 #fff}
 h1{font:16px 'Michroma',sans-serif;letter-spacing:.18em;margin:0;color:#1b1b1b;text-shadow:0 1px 0 #fff8}
 .model{font:10px 'Michroma',sans-serif;letter-spacing:.3em;color:#555}
-.wrap{display:grid;grid-template-columns:230px 1fr 1.2fr;gap:18px}
+.wrap{display:grid;grid-template-columns:240px 1fr 1.2fr;gap:18px}
 @media(max-width:1000px){.wrap{grid-template-columns:1fr}}
 .lbl{font:10px 'Michroma',sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#333;margin:12px 0 6px;text-shadow:0 1px 0 #fff8}
 .lbl:first-child{margin-top:0}
+.hint{font:12px 'Barlow Condensed',sans-serif;color:#444;margin:-2px 0 4px}
 button{display:flex;align-items:center;gap:9px;width:100%;margin:3px 0;padding:7px 10px;cursor:pointer;text-align:left;
  font:600 15px 'Barlow Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#e9dcc0;
  background:linear-gradient(#3b3b3b,#1d1d1d);border:1px solid #000;border-radius:3px;box-shadow:inset 0 1px 0 #ffffff26,0 2px 0 #0006}
@@ -31,6 +30,9 @@ button::before{content:'';flex:0 0 9px;height:9px;border-radius:50%;background:#
 button.on::before{background:var(--amber);box-shadow:0 0 8px var(--amber),inset 0 -1px 2px #a65f00}
 button.on{color:#fff3d6}
 button .sw{width:16px;height:4px;margin-left:auto;border-radius:1px}
+button .rate{margin-left:auto;font-size:12px;letter-spacing:.12em;color:#ffb000}
+button .rate .off{color:#5a4a30}
+button .rate.na{color:#7a6a50;letter-spacing:.04em}
 select{width:100%;padding:7px;font:600 15px 'Barlow Condensed',sans-serif;color:#1b1b1b;border:1px solid #777;border-radius:3px;
  background:linear-gradient(#f2f2ef,#c9cac5);box-shadow:inset 0 1px 0 #fff,0 1px 2px #0005}
 .window{position:relative;padding:9px;border-radius:6px;background:#160f09;box-shadow:inset 0 2px 8px #000,0 1px 0 #fff}
@@ -45,8 +47,9 @@ select{width:100%;padding:7px;font:600 15px 'Barlow Condensed',sans-serif;color:
 <div class="cabinet"><div class="face">
 <header><h1>POLAR·PATTERN EXPLORER</h1><span class="model"><span class="screw"></span>&nbsp; MICROPHONE ANALYZER · MODEL PX-76 &nbsp;<span class="screw"></span></span></header>
 <div class="wrap">
-<div><div class="lbl">Polar pattern</div><div id="pats"></div><div class="lbl">Frequency band</div><div id="bands"></div>
-<div class="lbl">Use case</div><select id="use"><option value="podcast">Podcast desk</option><option value="lav">Lavalier (chest)</option><option value="boom">Boom above talent</option></select>
+<div><div class="lbl">Use case</div><select id="use"><option value="podcast">Podcast desk</option><option value="lav">Lavalier (chest)</option><option value="boom">Boom above talent</option></select>
+<div class="lbl">Polar pattern</div><div class="hint">★ = suitability for this use case</div><div id="pats"></div>
+<div class="lbl">Frequency band</div><div id="bands"></div>
 <div class="lbl">Example mic</div><select id="mic"></select></div>
 <div><div class="window"><canvas id="polar" width="680" height="680"></canvas></div><div class="card" id="meter"></div></div>
 <div><div class="window"><canvas id="fr" width="720" height="340"></canvas></div><div class="card" id="info"></div></div>
@@ -87,7 +90,42 @@ mics:[["Sennheiser MKH 416","RF condenser","40–20,000 Hz",[[20,-10],[40,-3],[1
 ["Neumann KMR 81 i","Condenser","20 Hz–20 kHz",[[20,-6],[50,-1],[1000,0],[2000,0],[5000,2],[10000,3],[16000,2],[20000,-2]],"Film dialogue; linear to 2 kHz then treble lift; 200 Hz low cut."],
 ["RØDE NTG3","RF-bias condenser","40 Hz–20 kHz",[[20,-10],[40,-3],[1000,0],[5000,1],[10000,2],[20000,-2]],"Moisture-resistant outdoor boom."],
 ["Sennheiser MKH 60","RF condenser","50–20,000 Hz",[[20,-12],[50,-3],[1000,0],[8000,1],[20000,-1]],"Short shotgun with presence (treble) switch."]]}};
-const FLAG={omni:"DPA 4060 lavalier (shown enlarged)",cardioid:"Shure SM7B on boom arm",super:"Schoeps CMC 641 in shock mount",hyper:"Audio-Technica AT4053b in shock mount",fig8:"Royer R-121 ribbon (side-address)",shotgun:"Sennheiser MKH 416 on pistol grip"};
+
+// Use cases: typical noise source position, pattern suitability (0–3) and placement tips
+const USE={
+podcast:{n:"Podcast desk",noise:{label:"CO-HOST",ang:180},
+ rate:{omni:1,cardioid:3,super:2,hyper:2,fig8:2,shotgun:1},
+ tip:{omni:"Only in a quiet, treated room — it hears the whole room, and your co-host, equally.",
+  cardioid:"The standard. 5–15 cm from the mouth, with the rear null (180°) pointed at your co-host.",
+  super:"Tighter sides. Aim a null (~126°) at the co-host rather than the back of the mic.",
+  hyper:"Most side rejection, but a −6 dB rear lobe: don't sit a co-host directly behind it — use the ~110° nulls.",
+  fig8:"Two hosts face to face on one mic: the co-host is in the rear lobe on purpose, and the 90° sides reject the room.",
+  shotgun:"Overkill up close: the tone changes as you move off-axis, and room reflections sound hollow. Better on a boom."}},
+lav:{n:"Lavalier (chest)",noise:{label:"ROOM NOISE",ang:135},
+ rate:{omni:3,cardioid:2,super:0,hyper:0,fig8:0,shotgun:0},
+ tip:{omni:"The broadcast default: mid-chest, 20–25 cm from the mouth. Forgiving when the head turns; add a 3–5 kHz lift in post.",
+  cardioid:"Directional lavs (e.g. DPA 4080) must be aimed at the mouth; useful in loud venues or near PA speakers.",
+  super:"Not made as a lavalier pattern.",hyper:"Not made as a lavalier pattern.",fig8:"Not made as a lavalier pattern.",shotgun:"Not a lavalier pattern."}},
+boom:{n:"Boom above talent",noise:{label:"CAMERA / CREW",ang:125},
+ rate:{omni:1,cardioid:2,super:3,hyper:3,fig8:0,shotgun:3},
+ tip:{omni:"Only in very quiet interiors — it picks up the whole set.",
+  cardioid:"Fine for close boom work, about 2 ft or less above talent.",
+  super:"Preferred indoors (MK 41, MKH 50): narrow pickup without a shotgun's room colouration. 1–3 ft overhead.",
+  hyper:"Indoors, 1–2 ft overhead. Aim the ~110° nulls at camera or HVAC, not the rear.",
+  fig8:"Not used on booms — the rear lobe hears the ceiling as loudly as the talent.",
+  shotgun:"Outdoors / ENG: 2–3 ft above, aimed down at the mouth so the off-axis points at ground or sky."}}};
+
+// Which drawing to use for each example mic
+const LOOK={"DPA 4060":"dpa","Sanken COS-11D":"cos11","Sony ECM-77B":"ecm77","Countryman B6":"b6","Tram TR50":"tr50",
+ "Shure SM7B":"sm7b","Electro-Voice RE20":"re20","Heil PR 40":"pr40","Shure SM58":"sm58","Neumann U 87 Ai":"u87",
+ "Schoeps CMC 641 (MK 41)":"schoeps","Sennheiser MKH 50":"mkh50","Audio-Technica AT4053b":"at4053",
+ "Royer R-121":"r121","Neumann U 87 Ai (fig-8)":"u87",
+ "Sennheiser MKH 416":"mkh416","Neumann KMR 81 i":"kmr81","RØDE NTG3":"ntg3","Sennheiser MKH 60":"mkh60"};
+const MOUNT={sm7b:"on boom arm",re20:"in shock mount",pr40:"in yoke",sm58:"in stand clip",u87:"in spider shock mount (side-address)",
+ schoeps:"in shock mount",mkh50:"in shock mount",at4053:"in shock mount",r121:"on stand (side-address)",
+ mkh416:"on pistol grip",kmr81:"on pistol grip",ntg3:"on pistol grip",mkh60:"on pistol grip",
+ dpa:"lavalier, shown enlarged",cos11:"lavalier, shown enlarged",ecm77:"tie-clip lavalier, shown enlarged",b6:"lavalier, shown enlarged",tr50:"tie-bar lavalier, shown enlarged"};
+
 const ROT=Math.PI/4; // 0° axis points up-right (45°)
 let pat='cardioid',band=1,mic=0,t=0;
 const $=id=>document.getElementById(id);
@@ -96,59 +134,106 @@ function patVal(k,f,th){const p=P[k];let i=BANDS.indexOf(f);let A=i>=0?p.A[i]:in
 function interpA(a,f){const lf=Math.log10(f);for(let i=0;i<4;i++){const l0=Math.log10(BANDS[i]),l1=Math.log10(BANDS[i+1]);if(lf<=l1)return a[i]+(a[i+1]-a[i])*Math.max(0,(lf-l0)/(l1-l0));}return a[4];}
 const db=v=>20*Math.log10(Math.max(Math.abs(v),1e-4));
 const fl=f=>f>=1000?f/1000+' kHz':f+' Hz';
-function ui(){$('pats').innerHTML=Object.keys(P).map(k=>`<button class="${k==pat?'on':''}" onclick="pat='${k}';mic=0;ui()">${P[k].n}</button>`).join('');
+const stars=n=>n?'★'.repeat(n)+'<span class="off">'+'★'.repeat(3-n)+'</span>':'';
+function ui(){const U=USE[$('use').value];
+ $('pats').innerHTML=Object.keys(P).map(k=>{const r=U.rate[k];return `<button class="${k==pat?'on':''}" onclick="pat='${k}';mic=0;ui()">${P[k].n}<span class="rate${r?'':' na'}">${r?stars(r):'N/A'}</span></button>`;}).join('');
  $('bands').innerHTML=BANDS.map((f,i)=>`<button class="${i==band?'on':''}" onclick="band=${i};ui()">${fl(f)}<span class="sw" style="background:${BCOL[i]}"></span></button>`).join('');
  $('mic').innerHTML=P[pat].mics.map((m,i)=>`<option value="${i}" ${i==mic?'selected':''}>${m[0]}</option>`).join('');drawFR();}
-$('mic').onchange=e=>{mic=+e.target.value;drawFR();};$('use').onchange=drawFR;
+$('mic').onchange=e=>{mic=+e.target.value;drawFR();};$('use').onchange=ui;
 
 function pol(cx,cy,r,th){return [cx+r*Math.sin(th+ROT),cy-r*Math.cos(th+ROT)];}
 function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
 function metal(g,y0,y1,a,b){const gr=g.createLinearGradient(0,y0,0,y1);gr.addColorStop(0,b);gr.addColorStop(.35,a);gr.addColorStop(1,b);return gr;}
-// warm backlit "meter paper" background
+function metalX(g,x0,x1,a,b){const gr=g.createLinearGradient(x0,0,x1,0);gr.addColorStop(0,b);gr.addColorStop(.45,a);gr.addColorStop(1,b);return gr;}
+function line(g,pts,w,col){g.lineWidth=w;g.strokeStyle=col;g.lineCap='round';g.lineJoin='round';g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.stroke();g.lineCap='butt';}
 function paper(g,W,H,cx,cy){const gr=g.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*.75);
  gr.addColorStop(0,'#fbf0cf');gr.addColorStop(.55,'#efd79d');gr.addColorStop(1,'#c99a55');g.fillStyle=gr;g.fillRect(0,0,W,H);}
 
-// Mic drawn in local coords: front (0° side) at x=0, body extends toward -x.
-function drawMic(g,x,y){
+// ---- mic drawings: local coords, front (0° side) at x=0, body toward -x ----
+function lav(g,o){ // o: len,r,col,cap,clip:'croc'|'tie'|'vamp'
+ line(g,[[-o.len+2,0],[-o.len-70,8],[-o.len-120,60],[-o.len-190,58]],4.5,'#1d1e21');
+ if(o.clip==='tie'){g.fillStyle=metal(g,10,30,'#d4d6d9','#8e9196');rr(g,-o.len-14,o.r-2,o.len+4,14,3);g.fill();g.fillStyle='#777';g.fillRect(-o.len-14,o.r+10,o.len+4,3);}
+ else if(o.clip==='vamp'){g.fillStyle='#24262a';rr(g,-o.len-8,o.r-1,o.len-4,10,2);g.fill();g.fillStyle='#3a3d42';g.fillRect(-o.len-8,o.r+7,8,8);}
+ else{g.fillStyle='#55595f';g.fillRect(-o.len-6,o.r-2,o.len-6,8);for(let i=-o.len-4;i<-12;i+=5){g.fillStyle='#33363b';g.fillRect(i,o.r+6,3,5);}}
+ g.fillStyle=metal(g,-o.r,o.r,o.col,'#0d0e10');rr(g,-o.len,-o.r,o.len,o.r*2,Math.min(5,o.r*.5));g.fill();
+ g.fillStyle=o.cap;g.fillRect(-5,-o.r+1,5,o.r*2-2);g.fillStyle='#ffffff22';for(let j=-o.r+3;j<o.r-2;j+=3)g.fillRect(-4,j,3,1);}
+function pencil(g,o){ // o: len,head,r,body,bodyDark,headCol,headDark,ring
+ line(g,[[-o.len*.55,o.r+19],[-o.len*.55,70],[-o.len-30,70]],6,'#3a3f4a');
+ g.fillStyle=metal(g,-o.r,o.r,o.body,o.bodyDark);g.fillRect(-o.len,-o.r,o.len-o.head,o.r*2);
+ g.fillStyle='#777';g.fillRect(-o.len-7,-o.r*.55,7,o.r*1.1);
+ if(o.ring){g.fillStyle=o.ring;g.fillRect(-o.head-5,-o.r-1,4,o.r*2+2);}
+ g.fillStyle=metal(g,-o.r-1,o.r+1,o.headCol,o.headDark);rr(g,-o.head,-o.r-1,o.head,o.r*2+2,6);g.fill();
+ g.fillStyle='#0008';for(let i=-o.head+6;i<-4;i+=5)g.fillRect(i,-o.r+2,2,o.r*2-4);
+ g.lineWidth=2;g.strokeStyle='#8a6a25';[-o.len*.3,-o.len*.8].forEach(cx=>{g.beginPath();g.ellipse(cx,0,5,o.r+12,0,0,7);g.stroke();g.beginPath();g.moveTo(cx,o.r+12);g.lineTo(-o.len*.55,o.r+19);g.stroke();});}
+function shotgun(g,o){ // o: len,col,dark,rear,rearCol,slotEnd,ring
+ g.fillStyle='#2a2c31';g.beginPath();g.moveTo(-178,14);g.lineTo(-188,80);g.lineTo(-166,80);g.lineTo(-160,14);g.closePath();g.fill();
+ g.strokeStyle='#555';g.lineWidth=3;[-140,-215].forEach(cx=>{g.beginPath();g.moveTo(cx,-14);g.lineTo(cx,14);g.lineTo(-170,14);g.stroke();});
+ g.fillStyle=metal(g,-10,10,o.col,o.dark);g.fillRect(-o.len,-10,o.len,20);
+ g.fillStyle=o.rearCol;g.fillRect(-o.len,-10,o.rear,20);g.fillStyle='#777';g.fillRect(-o.len-8,-6,8,12);
+ if(o.ring){g.fillStyle=o.ring;g.fillRect(-o.len+o.rear,-10,4,20);}
+ g.fillStyle='#0009';for(let i=o.slotEnd;i<-12;i+=9){g.fillRect(i,-8,5,3);g.fillRect(i+4,4,5,3);}
+ g.fillStyle='#3d4148';g.fillRect(-6,-10,6,20);}
+function drawMic(g,x,y,look){
  g.save();g.translate(x,y);g.rotate(ROT-Math.PI/2);g.scale(.8,.8);g.lineWidth=1.2;g.strokeStyle='#0004';
- if(pat==='cardioid'){ // Shure SM7B
-  g.strokeStyle='#3a3f4a';g.lineWidth=7;g.beginPath();g.moveTo(-128,40);g.lineTo(-215,100);g.stroke();
-  g.lineWidth=5;g.strokeStyle='#4a505c';g.beginPath();g.moveTo(-128,20);g.lineTo(-128,44);g.stroke();
-  g.fillStyle=metal(g,-24,24,'#3b3f47','#1d1f24');g.beginPath();g.moveTo(-74,-24);g.lineTo(-176,-18);g.lineTo(-176,18);g.lineTo(-74,24);g.closePath();g.fill();g.stroke();
+ switch(look){
+ case 'sm7b':
+  line(g,[[-128,40],[-215,100]],7,'#3a3f4a');line(g,[[-128,20],[-128,44]],5,'#4a505c');
+  g.fillStyle=metal(g,-24,24,'#3b3f47','#1d1f24');g.beginPath();g.moveTo(-74,-24);g.lineTo(-176,-18);g.lineTo(-176,18);g.lineTo(-74,24);g.closePath();g.fill();
   g.fillStyle='#16181c';g.fillRect(-188,-13,12,26);g.fillStyle='#888';g.fillRect(-194,-7,6,14);
   g.fillStyle='#5b6170';g.beginPath();g.arc(-128,20,8,0,7);g.fill();
   g.fillStyle=metal(g,-31,31,'#2d3038','#16181c');rr(g,-80,-31,80,62,24);g.fill();g.lineWidth=1;g.strokeStyle='#000';g.stroke();
-  g.fillStyle='#ffffff10';for(let i=-72;i<-4;i+=7)for(let j=-24;j<26;j+=7)g.fillRect(i,j,2,2);
- }else if(pat==='omni'){ // DPA 4060 lav (enlarged)
-  g.strokeStyle='#202226';g.lineWidth=5;g.beginPath();g.moveTo(-38,0);g.bezierCurveTo(-110,10,-120,70,-200,60);g.stroke();
-  g.fillStyle='#55595f';g.fillRect(-46,9,34,8);for(let i=-44;i<-12;i+=5){g.fillStyle='#33363b';g.fillRect(i,17,3,5);}
-  g.fillStyle=metal(g,-11,11,'#2a2c30','#0d0e10');rr(g,-40,-11,40,22,5);g.fill();
-  g.fillStyle='#6a6f78';g.fillRect(-5,-10,5,20);g.fillStyle='#ffffff22';for(let j=-8;j<9;j+=3)g.fillRect(-4,j,3,1);
- }else if(pat==='super'||pat==='hyper'){ // Schoeps CMC 641 / AT4053b pencil in shock mount
-  const sch=pat==='super';
-  g.strokeStyle='#3a3f4a';g.lineWidth=6;g.beginPath();g.moveTo(-125,30);g.lineTo(-125,70);g.lineTo(-230,70);g.stroke();
-  g.fillStyle=metal(g,-11,11,sch?'#8b9098':'#34373d',sch?'#4f535a':'#15171a');g.fillRect(-205,-11,157,22);
-  g.fillStyle='#777';g.fillRect(-212,-6,7,12);
-  g.fillStyle=sch?'#9aa0a8':'#55585f';g.fillRect(-50,-12,4,24);
-  g.fillStyle=metal(g,-13,13,sch?'#b3b8bf':'#40434a',sch?'#6c7179':'#1b1d21');rr(g,-46,-13,46,26,6);g.fill();
-  g.fillStyle='#0008';for(let i=-40;i<-4;i+=5)g.fillRect(i,-10,2,20);
-  g.lineWidth=2;g.strokeStyle='#8a6a25';[-85,-165].forEach(cx=>{g.beginPath();g.ellipse(cx,0,5,24,0,0,7);g.stroke();g.beginPath();g.moveTo(cx,24);g.lineTo(-125,30);g.stroke();});
- }else if(pat==='fig8'){ // Royer R-121 side-address, front face toward +x
-  g.strokeStyle='#4a505c';g.lineWidth=6;g.beginPath();g.moveTo(-14,58);g.lineTo(-14,96);g.lineTo(-60,96);g.stroke();
-  const gr=g.createLinearGradient(-28,0,0,0);gr.addColorStop(0,'#7d828a');gr.addColorStop(.5,'#d7dbe0');gr.addColorStop(1,'#8d9299');g.fillStyle=gr;
-  rr(g,-28,-96,28,154,12);g.fill();g.lineWidth=1;g.strokeStyle='#000';g.stroke();
-  g.fillStyle='#0007';for(let j=-84;j<12;j+=5)g.fillRect(-24,j,20,2);
- }else{ // shotgun: Sennheiser MKH 416 on pistol grip
-  g.fillStyle='#2a2c31';g.beginPath();g.moveTo(-178,14);g.lineTo(-188,80);g.lineTo(-166,80);g.lineTo(-160,14);g.closePath();g.fill();
-  g.strokeStyle='#555';g.lineWidth=3;[-150,-215].forEach(cx=>{g.beginPath();g.moveTo(cx,-14);g.lineTo(cx,14);g.lineTo(-170,14);g.stroke();});
-  g.fillStyle=metal(g,-10,10,'#9ea3ab','#5a5f66');g.fillRect(-250,-10,250,20);
-  g.fillStyle='#4a4e55';g.fillRect(-250,-10,48,20);g.fillStyle='#777';g.fillRect(-258,-6,8,12);
-  g.fillStyle='#0009';for(let i=-196;i<-12;i+=9){g.fillRect(i,-8,5,3);g.fillRect(i+4,4,5,3);}
-  g.fillStyle='#3d4148';g.fillRect(-6,-10,6,20);
+  g.fillStyle='#ffffff10';for(let i=-72;i<-4;i+=7)for(let j=-24;j<26;j+=7)g.fillRect(i,j,2,2);break;
+ case 're20': // fawn-beige end-address dynamic in shock-mount ring
+  line(g,[[-140,36],[-140,92],[-220,92]],6,'#2c2e33');
+  g.fillStyle=metal(g,-26,26,'#c7bca5','#7f7562');rr(g,-205,-26,115,52,10);g.fill();
+  g.fillStyle=metal(g,-30,30,'#d3c9b3','#8a8069');rr(g,-96,-30,96,60,12);g.fill();
+  g.strokeStyle='#5e5646';g.lineWidth=1.5;for(let i=-90;i<-4;i+=6){g.beginPath();g.moveTo(i,-27);g.lineTo(i,27);g.stroke();}
+  g.fillStyle='#4a453b';g.fillRect(-212,-9,8,18);
+  g.lineWidth=5;g.strokeStyle='#2c2e33';g.beginPath();g.ellipse(-140,0,7,36,0,0,7);g.stroke();break;
+ case 'pr40': // champagne body, gold trim, front mesh
+  line(g,[[-110,28],[-110,90],[-200,90]],6,'#2c2e33');g.lineWidth=4;g.strokeStyle='#2c2e33';g.beginPath();g.ellipse(-110,0,6,32,0,0,7);g.stroke();
+  g.fillStyle=metal(g,-27,27,'#ddd2b0','#8d8467');rr(g,-192,-27,192,54,8);g.fill();
+  g.fillStyle=metal(g,-27,27,'#e3c26a','#8a6a25');g.fillRect(-192,-27,12,54);g.fillRect(-66,-28,5,56);
+  g.fillStyle='#00000030';for(let i=-58;i<-4;i+=5)for(let j=-23;j<24;j+=5)g.fillRect(i,j,2,2);break;
+ case 'sm58': // ball grille + tapered black handle in clip
+  line(g,[[-125,20],[-125,85],[-210,85]],6,'#2c2e33');g.fillStyle='#1d1e21';g.fillRect(-150,8,52,14);
+  g.fillStyle=metal(g,-18,18,'#3a3c40','#121315');g.beginPath();g.moveTo(-52,-18);g.lineTo(-195,-12);g.lineTo(-195,12);g.lineTo(-52,18);g.closePath();g.fill();
+  g.fillStyle='#777';g.fillRect(-201,-7,6,14);
+  g.fillStyle=metal(g,-21,21,'#d6d8db','#8a8d92');g.fillRect(-58,-21,8,42);
+  {const gr=g.createRadialGradient(-32,-10,4,-28,0,30);gr.addColorStop(0,'#eef0f2');gr.addColorStop(1,'#80848a');g.fillStyle=gr;g.beginPath();g.arc(-28,0,28,0,7);g.fill();}
+  g.save();g.beginPath();g.arc(-28,0,27,0,7);g.clip();g.strokeStyle='#0004';g.lineWidth=1;for(let k=-60;k<60;k+=5){g.beginPath();g.moveTo(-28+k,-30);g.lineTo(-28+k+30,30);g.stroke();g.beginPath();g.moveTo(-28+k,30);g.lineTo(-28+k+30,-30);g.stroke();}g.restore();break;
+ case 'u87': // side-address: front face toward +x, capsule in head
+  line(g,[[-17,150],[-17,205],[-70,205]],6,'#2c2e33');
+  g.strokeStyle='#2c2e33';g.lineWidth=3;g.beginPath();g.ellipse(-17,70,46,9,0,0,7);g.stroke();
+  g.lineWidth=1;g.strokeStyle='#0007';[[-60,60],[26,60],[-60,80],[26,80]].forEach(([a,b])=>{g.beginPath();g.moveTo(a,b);g.lineTo(b<70?-34:0,b<70?40:100);g.stroke();});
+  g.fillStyle=metalX(g,-34,0,'#e2e4e6','#8f9398');rr(g,-32,20,30,128,8);g.fill();
+  g.fillStyle=metalX(g,-36,2,'#d0d3d6','#7e8288');rr(g,-36,-62,38,88,18);g.fill();
+  g.fillStyle='#0006';for(let j=-52;j<20;j+=4)g.fillRect(-32,j,30,1.4);
+  g.fillStyle='#1d1e21';g.beginPath();g.arc(-17,50,5,0,7);g.fill();break;
+ case 'r121': // ribbon, side-address
+  line(g,[[-14,58],[-14,96],[-60,96]],6,'#4a505c');
+  g.fillStyle=metalX(g,-28,0,'#d7dbe0','#7d828a');rr(g,-28,-96,28,154,12);g.fill();g.lineWidth=1;g.strokeStyle='#000';g.stroke();
+  g.fillStyle='#0007';for(let j=-84;j<12;j+=5)g.fillRect(-24,j,20,2);break;
+ case 'schoeps':pencil(g,{len:205,head:46,r:11,body:'#8b9098',bodyDark:'#4f535a',headCol:'#b3b8bf',headDark:'#6c7179',ring:'#9aa0a8'});break;
+ case 'mkh50':pencil(g,{len:165,head:62,r:12,body:'#80848b',bodyDark:'#43464b',headCol:'#9a9ea5',headDark:'#55595f'});break;
+ case 'at4053':pencil(g,{len:175,head:38,r:11,body:'#34373d',bodyDark:'#15171a',headCol:'#40434a',headDark:'#1b1d21',ring:'#c9a24d'});break;
+ case 'mkh416':shotgun(g,{len:250,col:'#9ea3ab',dark:'#5a5f66',rear:48,rearCol:'#4a4e55',slotEnd:-196});break;
+ case 'kmr81':shotgun(g,{len:226,col:'#c5c8cc',dark:'#7d8186',rear:62,rearCol:'#a9adb2',slotEnd:-150,ring:'#6b6f75'});break;
+ case 'ntg3':shotgun(g,{len:255,col:'#d4d7db',dark:'#8b8f95',rear:70,rearCol:'#c2c5ca',slotEnd:-180,ring:'#2a2c30'});break;
+ case 'mkh60':shotgun(g,{len:280,col:'#7c8087',dark:'#3f4247',rear:60,rearCol:'#55585e',slotEnd:-215});break;
+ case 'dpa':lav(g,{len:40,r:11,col:'#2a2c30',cap:'#6a6f78',clip:'croc'});break;
+ case 'cos11':lav(g,{len:34,r:10,col:'#25272b',cap:'#3c3f45',clip:'vamp'});break;
+ case 'ecm77':lav(g,{len:30,r:10,col:'#2a2c30',cap:'#55585e',clip:'tie'});break;
+ case 'b6':lav(g,{len:18,r:6,col:'#2a2c30',cap:'#7a7f87',clip:'vamp'});break;
+ case 'tr50': // flat tie-bar lav, face toward +x
+  line(g,[[-46,0],[-110,10],[-150,60],[-220,58]],4.5,'#1d1e21');
+  g.fillStyle=metal(g,-16,16,'#3a3c40','#121315');rr(g,-46,-16,46,32,4);g.fill();
+  g.fillStyle='#6a6f78';g.fillRect(-5,-11,5,22);g.fillStyle=metal(g,16,24,'#d4d6d9','#8e9196');g.fillRect(-50,16,52,6);break;
  }
- g.restore();
-}
+ g.restore();}
+
 function drawPolar(){const c=$('polar'),g=c.getContext('2d'),W=c.width,H=c.height,cx=340,cy=350,R=210;
+ const u=$('use').value,U=USE[u],m=P[pat].mics[mic]||P[pat].mics[0],look=LOOK[m[0]];
  paper(g,W,H,cx,cy);
  g.lineWidth=1;g.textAlign='center';g.font=`13px ${T.F}`;
  for(let d=0;d<=30;d+=10){g.strokeStyle=d==0?T.gridS:T.grid;g.beginPath();g.arc(cx,cy,R*(1-d/30),0,7);g.stroke();}
@@ -156,40 +241,48 @@ function drawPolar(){const c=$('polar'),g=c.getContext('2d'),W=c.width,H=c.heigh
  for(let a=0;a<360;a+=30){const th=a*Math.PI/180,[x,y]=pol(cx,cy,R,th);g.strokeStyle=T.grid;g.beginPath();g.moveTo(cx,cy);g.lineTo(x,y);g.stroke();
   const [lx,ly]=pol(cx,cy,R+22,th);g.fillStyle=a==0?T.red:T.ink;g.font=`600 14px ${T.F}`;g.fillText(a+'°',lx,ly+5);}
  g.font=`12px ${T.F}`;g.fillStyle=T.dim;for(let d=0;d<30;d+=10){const [x,y]=pol(cx,cy,R*(1-d/30),Math.PI/2);g.fillText('−'+d+' dB',x-4,y-6);}
- // vocal pickup zones
  if(pat!=='omni'){const base=ROT-Math.PI/2,dirs=pat==='fig8'?[0,Math.PI]:[0];
   dirs.forEach(d=>{[[60,`rgba(${T.usable},.16)`],[30,`rgba(${T.ideal},.2)`]].forEach(([a,col])=>{const r=a*Math.PI/180;
    g.fillStyle=col;g.beginPath();g.moveTo(cx,cy);g.arc(cx,cy,R,base+d-r,base+d+r);g.closePath();g.fill();});});
   g.font=`600 12px ${T.F}`;[[30,T.ideal,'IDEAL'],[60,T.usable,'USABLE']].forEach(([a,col,txt])=>{const [lx,ly]=pol(cx,cy,R-14,-a*Math.PI/180);g.fillStyle=`rgb(${col})`;g.fillText(txt,lx,ly);});}
- // on-axis line through the capsule
  const [bx,by]=pol(cx,cy,R,Math.PI),[fx,fy]=pol(cx,cy,R,0);
  g.setLineDash([6,6]);g.strokeStyle='rgba(179,54,31,.6)';g.beginPath();g.moveTo(bx,by);g.lineTo(fx,fy);g.stroke();g.setLineDash([]);
  const [ox,oy]=pol(cx,cy,R+44,0);g.fillStyle=T.red;g.font=`11px Michroma,${T.F}`;g.fillText('ON-AXIS',ox,oy);
- g.globalAlpha=.95;drawMic(g,cx,cy);g.globalAlpha=1;
+ g.globalAlpha=.95;drawMic(g,cx,cy,look);g.globalAlpha=1;
  BANDS.forEach((f,i)=>{g.beginPath();for(let a=0;a<=360;a++){const th=a*Math.PI/180,r=R*Math.max(0,(db(patVal(pat,f,th))+30)/30),[x,y]=pol(cx,cy,r,th);a?g.lineTo(x,y):g.moveTo(x,y);}
   g.strokeStyle=BCOL[i];g.globalAlpha=i==band?1:.35;g.lineWidth=i==band?2.8:1.2;g.stroke();if(i==band){g.fillStyle=BCOL[i]+'26';g.fill();}g.globalAlpha=1;g.lineWidth=1;});
- const use=$('use').value,rec=P[pat].d[use];g.setLineDash([3,5]);g.strokeStyle=T.ink;g.globalAlpha=.6;g.beginPath();g.arc(cx,cy,R*0.5,0,7);g.stroke();g.globalAlpha=1;g.setLineDash([]);
+ const rec=P[pat].d[u];g.setLineDash([3,5]);g.strokeStyle=T.ink;g.globalAlpha=.6;g.beginPath();g.arc(cx,cy,R*0.5,0,7);g.stroke();g.globalAlpha=1;g.setLineDash([]);
+ const f=BANDS[band];
+ // noise source for this use case
+ const nth=U.noise.ang*Math.PI/180,nlv=db(patVal(pat,f,nth)),[nx,ny]=pol(cx,cy,R*.82,nth);
+ g.setLineDash([2,4]);g.strokeStyle='rgba(43,29,16,.45)';g.beginPath();g.moveTo(nx,ny);g.lineTo(cx,cy);g.stroke();g.setLineDash([]);
+ g.fillStyle='#3d3226';rr(g,nx-11,ny-9,22,18,3);g.fill();g.fillStyle='#efe3c4';g.beginPath();g.arc(nx,ny,5,0,7);g.fill();
+ for(let k=0;k<2;k++){const wr=((t*30+k*12)%24);g.strokeStyle=`rgba(43,29,16,${(1-wr/24)*.5})`;g.beginPath();g.arc(nx,ny,14+wr,0,7);g.stroke();}
+ g.textAlign='center';g.font=`600 13px ${T.F}`;
+ const nTxt=`${nlv<=-29.9?'≤ −30':nlv.toFixed(1)} dB`,pw=Math.max(g.measureText(U.noise.label).width,g.measureText(nTxt).width)+12;
+ g.fillStyle='rgba(239,227,196,.92)';rr(g,nx-pw/2,ny+16,pw,34,3);g.fill();g.strokeStyle='rgba(43,29,16,.5)';g.stroke();
+ g.fillStyle=T.ink;g.fillText(U.noise.label,nx,ny+30);
+ g.fillStyle=nlv<=-15?`rgb(${T.ideal})`:nlv<=-6?`rgb(${T.usable})`:`rgb(${T.out})`;g.fillText(nTxt,nx,ny+45);
  g.textAlign='left';
- // animated source
+ // animated voice source
  const th=t*0.5,dd=rec?rec*(1+0.7*Math.sin(t*0.8)):30,rad=R*0.5*dd/(rec||30),[sx,sy]=pol(cx,cy,rad,th);
- const f=BANDS[band],lvl=db(patVal(pat,f,th))+20*Math.log10((rec||30)/dd);
+ const lvl=db(patVal(pat,f,th))+20*Math.log10((rec||30)/dd);
  let off=Math.acos(Math.cos(th))*180/Math.PI;if(pat==='fig8')off=Math.min(off,180-off);
  const zone=pat==='omni'?['all angles (omni)',T.ideal]:off<=30?['ideal (±30°)',T.ideal]:off<=60?['usable, duller (±60°)',T.usable]:['outside vocal zone',T.out];
  for(let k=0;k<3;k++){const wr=(t*40+k*15)%45;g.strokeStyle=`rgba(${zone[1]},${(1-wr/45)*.7})`;g.lineWidth=1.5;g.beginPath();g.arc(sx,sy,10+wr,0,7);g.stroke();}
  g.lineWidth=1;g.fillStyle=`rgb(${zone[1]})`;g.beginPath();g.arc(sx,sy,8+3*Math.sin(t*6),0,7);g.fill();g.strokeStyle=T.ink;g.stroke();
  g.fillStyle=T.red;g.beginPath();g.arc(cx,cy,4,0,7);g.fill();
- // VU-style level strip
  const bx0=20,bw0=W-40,bw=Math.max(0,Math.min(1,(lvl+30)/36));
  g.fillStyle='rgba(43,29,16,.12)';g.fillRect(bx0,16,bw0,12);
  g.fillStyle=lvl>-6?`rgb(${T.ideal})`:lvl>-15?`rgb(${T.usable})`:`rgb(${T.out})`;g.fillRect(bx0,16,bw0*bw,12);
  g.strokeStyle=T.ink;g.strokeRect(bx0,16,bw0,12);g.font=`11px ${T.F}`;g.fillStyle=T.dim;g.textAlign='center';
  for(let d=-30;d<=6;d+=6){const x=bx0+bw0*(d+30)/36;g.beginPath();g.moveTo(x,28);g.lineTo(x,33);g.stroke();g.fillText(d>0?'+'+d:d,x,44);}
  g.textAlign='left';
- g.fillStyle=T.ink;g.font=`600 15px ${T.F}`;g.fillText(rec?`RECOMMENDED ≈ ${rec} cm  (dotted ring)`:'NOT TYPICALLY USED FOR THIS USE CASE',20,66);
+ g.fillStyle=T.ink;g.font=`600 15px ${T.F}`;g.fillText(rec?`${U.n.toUpperCase()} · RECOMMENDED ≈ ${rec} cm  (dotted ring)`:`${U.n.toUpperCase()} · PATTERN NOT USED FOR THIS`,20,66);
  const ang=((th*180/Math.PI)%360);
  g.fillStyle=`rgb(${zone[1]})`;g.fillText(`VOICE AT ${ang.toFixed(0)}°: ${zone[0].toUpperCase()}`,20,86);
- g.fillStyle=T.ink;g.font=`14px ${T.F}`;g.fillText('SHOWN: '+FLAG[pat].toUpperCase()+' — AIMED AT 0°',20,H-16);
- $('meter').textContent=`SOURCE   ${ang.toFixed(0)}° (${off.toFixed(0)}° off-axis) — ${zone[0]}\nDISTANCE ${dd.toFixed(0)} cm\nPICKUP   ${lvl.toFixed(1)} dB @ ${fl(f)}, re on-axis at recommended distance`;}
+ g.fillStyle=T.ink;g.font=`14px ${T.F}`;g.fillText(`SHOWN: ${m[0].toUpperCase()} — ${MOUNT[look].toUpperCase()} — AIMED AT 0°`,20,H-16);
+ $('meter').textContent=`VOICE    ${ang.toFixed(0)}° (${off.toFixed(0)}° off-axis) — ${zone[0]}\nDISTANCE ${dd.toFixed(0)} cm\nPICKUP   ${lvl.toFixed(1)} dB @ ${fl(f)}, re on-axis at recommended distance\nNOISE    ${U.noise.label.toLowerCase()} at ${U.noise.ang}°: ${nlv<=-29.9?'≤ −30':nlv.toFixed(1)} dB @ ${fl(f)} (${nlv<=-15?'well rejected':nlv<=-6?'partly rejected':'barely rejected'})`;}
 function frGain(pts,f){const lf=Math.log10(f);if(lf<=Math.log10(pts[0][0]))return pts[0][1];
  for(let i=0;i<pts.length-1;i++){const a=Math.log10(pts[i][0]),b=Math.log10(pts[i+1][0]);if(lf<=b){const u=(lf-a)/(b-a),s=(1-Math.cos(Math.PI*u))/2;return pts[i][1]+(pts[i+1][1]-pts[i][1])*s;}}return pts[pts.length-1][1];}
 function drawFR(){const c=$('fr'),g=c.getContext('2d'),W=c.width,H=c.height,l=44,r=W-14,tp=14,bt=H-28,lo=-24,hi=12;
@@ -207,7 +300,8 @@ function drawFR(){const c=$('fr'),g=c.getContext('2d'),W=c.width,H=c.height,l=44
  g.fillStyle=bc;g.beginPath();g.arc(X(fc),Y(gv),5.5,0,7);g.fill();g.strokeStyle='#fbf0cf';g.lineWidth=2;g.stroke();g.lineWidth=1;
  g.font=`600 14px ${T.F}`;const tw=g.measureText(lab).width,lx=Math.min(r-tw-6,Math.max(l+6,X(fc)-tw/2));g.fillText(lab,lx,tp+18);
  g.fillStyle=T.dim;g.font=`11px Michroma,${T.F}`;g.fillText('FREQUENCY RESPONSE · dB',l+8,bt-8);
- const p=P[pat],u=$('use').value;$('info').textContent=`${m[0]} — ${m[1]}\nSpec frequency range: ${m[2]}\n${m[4]}\n\nPattern: ${p.n}   Equation: ${p.eq}   Null(s): ${p.nul}\n${p.note}\nRecommended distance (${u}): ${p.d[u]?p.d[u]+' cm':'n/a'}\nCurve is an approximation for visualisation, not a measured response.`;}
+ const p=P[pat],u=$('use').value,U=USE[u],rt=U.rate[pat];
+ $('info').textContent=`${m[0]} — ${m[1]}\nSpec frequency range: ${m[2]}\n${m[4]}\n\nPattern: ${p.n}   Equation: ${p.eq}   Null(s): ${p.nul}\n${p.note}\n\nUSE CASE: ${U.n} — ${rt?'★'.repeat(rt)+'☆'.repeat(3-rt):'not used'}\n${U.tip[pat]}\nRecommended distance: ${p.d[u]?p.d[u]+' cm':'n/a'}\n\nCurve is an approximation for visualisation, not a measured response.`;}
 function loop(){t+=0.016;drawPolar();requestAnimationFrame(loop);}
 ui();loop();if(document.fonts)document.fonts.ready.then(ui);
 </script></body></html>
