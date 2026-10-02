@@ -126,6 +126,35 @@ const MOUNT={sm7b:"on boom arm",re20:"in shock mount",pr40:"in yoke",sm58:"in st
  mkh416:"on pistol grip",kmr81:"on pistol grip",ntg3:"on pistol grip",mkh60:"on pistol grip",
  dpa:"lavalier, shown enlarged",cos11:"lavalier, shown enlarged",ecm77:"tie-clip lavalier, shown enlarged",b6:"lavalier, shown enlarged",tr50:"tie-bar lavalier, shown enlarged"};
 
+// Self-noise (equivalent noise level) and sensitivity from manufacturer spec sheets.
+// n = self-noise in dB SPL (null = passive mic, no self-noise spec); w = weighting as published; s = sensitivity
+const NOISE={
+ "DPA 4060":{n:23,w:"dB(A) typ., max 26",s:"20 mV/Pa"},
+ "Sanken COS-11D":{n:28,w:"dB-A or less",s:"17.8 mV/Pa (XLR version)"},
+ "Sony ECM-77B":{n:30,w:"dB SPL or less",s:"−52 dB re 1 V/Pa (≈2.5 mV/Pa)"},
+ "Countryman B6":{n:24,w:"dBA (standard sensitivity)",s:"16 mV/Pa"},
+ "Tram TR50":{n:26,w:"dB SPL (weighting not stated; distributor sheet)",s:"−57 dB output (reference not stated)"},
+ "Shure SM7B":{n:null,type:"dynamic",s:"−59 dBV/Pa (1.12 mV/Pa)"},
+ "Electro-Voice RE20":{n:null,type:"dynamic",s:"1.5 mV/Pa"},
+ "Heil PR 40":{n:null,type:"dynamic",s:"−53.9 dB @ 1 kHz"},
+ "Shure SM58":{n:null,type:"dynamic",s:"−54.5 dBV/Pa (1.85 mV/Pa)"},
+ "Neumann U 87 Ai":{n:12,w:"dB-A (cardioid)",s:"28 mV/Pa (cardioid)"},
+ "Neumann U 87 Ai (fig-8)":{n:14,w:"dB-A (figure-8)",s:"22 mV/Pa (figure-8)"},
+ "Schoeps CMC 641 (MK 41)":{n:14,w:"dB-A",s:"16 mV/Pa"},
+ "Sennheiser MKH 50":{n:12,w:"dB-A",s:"25 mV/Pa"},
+ "Audio-Technica AT4053b":{n:16,w:"dB SPL",s:"−34 dB re 1 V/Pa (19.9 mV/Pa)"},
+ "Royer R-121":{n:null,type:"passive ribbon",s:"−50 dBV/Pa (≈3.2 mV/Pa)"},
+ "Sennheiser MKH 416":{n:13,w:"dB-A (approx.)",s:"25 mV/Pa"},
+ "Neumann KMR 81 i":{n:12,w:"dB-A",s:"18 mV/Pa"},
+ "RØDE NTG3":{n:13,w:"dB-A",s:"−30 dB re 1 V/Pa (≈31.6 mV/Pa)"},
+ "Sennheiser MKH 60":{n:8,w:"dB-A",s:"40 mV/Pa"}};
+function noiseText(name){const z=NOISE[name];if(!z)return '';
+ if(z.n===null)return `Self-noise:  n/a — ${z.type}, no active electronics, so no self-noise spec.\nSensitivity: ${z.s} — low output, so it needs lots of clean preamp gain; the preamp's hiss becomes the noise floor.`;
+ const r=z.n<=12?'very quiet':z.n<=16?'quiet':z.n<=22?'moderate':'higher, typical of miniature capsules';
+ return `Self-noise:  ${z.n} ${z.w} — ${r}\nSensitivity: ${z.s}`;}
+function noiseBadge(name){const z=NOISE[name];if(!z)return '';if(z.n===null)return `SELF-NOISE n/a (${z.type.toUpperCase()})`;
+ return `SELF-NOISE ${z.n} ${/^dB-?\(?A/.test(z.w)?'dB-A':'dB SPL'}`;}
+
 const ROT=Math.PI/4; // 0° axis points up-right (45°)
 let pat='cardioid',band=1,mic=0,t=0;
 const $=id=>document.getElementById(id);
@@ -300,8 +329,9 @@ function drawFR(){const c=$('fr'),g=c.getContext('2d'),W=c.width,H=c.height,l=44
  g.fillStyle=bc;g.beginPath();g.arc(X(fc),Y(gv),5.5,0,7);g.fill();g.strokeStyle='#fbf0cf';g.lineWidth=2;g.stroke();g.lineWidth=1;
  g.font=`600 14px ${T.F}`;const tw=g.measureText(lab).width,lx=Math.min(r-tw-6,Math.max(l+6,X(fc)-tw/2));g.fillText(lab,lx,tp+18);
  g.fillStyle=T.dim;g.font=`11px Michroma,${T.F}`;g.fillText('FREQUENCY RESPONSE · dB',l+8,bt-8);
+ {const nb=noiseBadge(m[0]);g.font=`600 14px ${T.F}`;const bw=g.measureText(nb).width+16;g.fillStyle='rgba(43,29,16,.85)';rr(g,r-bw-8,bt-28,bw,22,3);g.fill();g.fillStyle='#efe3c4';g.fillText(nb,r-bw,bt-12);}
  const p=P[pat],u=$('use').value,U=USE[u],rt=U.rate[pat];
- $('info').textContent=`${m[0]} — ${m[1]}\nSpec frequency range: ${m[2]}\n${m[4]}\n\nPattern: ${p.n}   Equation: ${p.eq}   Null(s): ${p.nul}\n${p.note}\n\nUSE CASE: ${U.n} — ${rt?'★'.repeat(rt)+'☆'.repeat(3-rt):'not used'}\n${U.tip[pat]}\nRecommended distance: ${p.d[u]?p.d[u]+' cm':'n/a'}\n\nCurve is an approximation for visualisation, not a measured response.`;}
+ $('info').textContent=`${m[0]} — ${m[1]}\nSpec frequency range: ${m[2]}\n${noiseText(m[0])}\n${m[4]}\n\nPattern: ${p.n}   Equation: ${p.eq}   Null(s): ${p.nul}\n${p.note}\n\nUSE CASE: ${U.n} — ${rt?'★'.repeat(rt)+'☆'.repeat(3-rt):'not used'}\n${U.tip[pat]}\nRecommended distance: ${p.d[u]?p.d[u]+' cm':'n/a'}\n\nCurve is an approximation for visualisation, not a measured response.`;}
 function loop(){t+=0.016;drawPolar();requestAnimationFrame(loop);}
 ui();loop();if(document.fonts)document.fonts.ready.then(ui);
 </script></body></html>
